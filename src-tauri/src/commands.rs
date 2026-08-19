@@ -15,6 +15,7 @@ pub fn toggle_visible(app: AppHandle) {
             let _ = w.set_skip_taskbar(true);
         } else {
             let _ = w.show();
+            let _ = w.unminimize();
             let _ = w.set_focus();
             let _ = w.set_skip_taskbar(false);
         }

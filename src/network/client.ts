@@ -7,6 +7,7 @@ export class GameClient {
   public onRawMessage: ((data: string) => void) | null = null;
   public onClose: (() => void) | null = null;
   public onOpen: (() => void) | null = null;
+  public onError: (() => void) | null = null;
 
   constructor(url: string) {
     this.url = url;
@@ -16,6 +17,7 @@ export class GameClient {
     this.ws = new WebSocket(this.url);
     this.ws.onopen = () => this.onOpen?.();
     this.ws.onclose = () => this.onClose?.();
+    this.ws.onerror = () => this.onError?.();
     this.ws.onmessage = (e) => {
       const msg = decode(e.data);
       if (msg) this.onMessage?.(msg);

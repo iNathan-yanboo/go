@@ -6,15 +6,14 @@ interface BoardProps {
   state: GameState;
   onPlace: (x: number, y: number) => void;
   disabled?: boolean;
+  boardColor: string;
+  boardTransparent: boolean;
 }
 
-const BOARD_COLOR = '#E8E0D0';
-const LINE_COLOR = '#AAA';
 const BLACK_COLOR = '#111';
 const WHITE_COLOR = '#f0f0f0';
 
-
-export default function Board({ state, onPlace, disabled }: BoardProps) {
+export default function Board({ state, onPlace, disabled, boardColor, boardTransparent }: BoardProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [hover, setHover] = useState<Position | null>(null);
@@ -51,10 +50,15 @@ export default function Board({ state, onPlace, disabled }: BoardProps) {
     canvas.height = canvasSize * dpr;
     ctx.scale(dpr, dpr);
 
-    ctx.fillStyle = BOARD_COLOR;
-    ctx.fillRect(0, 0, canvasSize, canvasSize);
+    if (boardTransparent) {
+      ctx.clearRect(0, 0, canvasSize, canvasSize);
+    } else {
+      ctx.fillStyle = boardColor;
+      ctx.fillRect(0, 0, canvasSize, canvasSize);
+    }
 
-    ctx.strokeStyle = LINE_COLOR;
+    const lineColor = boardTransparent ? '#999' : '#AAA';
+    ctx.strokeStyle = lineColor;
     ctx.lineWidth = 1;
     for (let i = 0; i < state.size; i++) {
       const pos = padding + i * cellSize;
@@ -72,7 +76,7 @@ export default function Board({ state, onPlace, disabled }: BoardProps) {
     for (const sp of starPoints) {
       ctx.beginPath();
       ctx.arc(padding + sp.x * cellSize, padding + sp.y * cellSize, cellSize * 0.1, 0, Math.PI * 2);
-      ctx.fillStyle = LINE_COLOR;
+      ctx.fillStyle = lineColor;
       ctx.fill();
     }
 
@@ -110,7 +114,7 @@ export default function Board({ state, onPlace, disabled }: BoardProps) {
       ctx.fillStyle = state.currentPlayer === BLACK ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.3)';
       ctx.fill();
     }
-  }, [state, canvasSize, hover, disabled, padding, cellSize, stoneRadius]);
+  }, [state, canvasSize, hover, disabled, padding, cellSize, stoneRadius, boardColor, boardTransparent]);
 
   const handleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (disabled) return;
@@ -125,7 +129,7 @@ export default function Board({ state, onPlace, disabled }: BoardProps) {
   };
 
   return (
-    <div ref={containerRef} style={{ width: '100%', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 0, background: '#f8f8f8' }}>
+    <div ref={containerRef} style={{ width: '100%', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 0, background: boardTransparent ? 'transparent' : '#f8f8f8' }}>
       <canvas
         ref={canvasRef}
         style={{ width: canvasSize, height: canvasSize, cursor: disabled ? 'default' : 'pointer', borderRadius: 4, boxShadow: '0 0 0 1px #ddd' }}

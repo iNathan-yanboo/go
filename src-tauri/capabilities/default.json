@@ -8,7 +8,16 @@
     "core:window:allow-start-dragging",
     "core:window:allow-close",
     "core:window:allow-hide",
+    "core:window:allow-show",
     "core:window:allow-minimize",
-    "global-shortcut:default"
+    "core:window:allow-unminimize",
+    "core:window:allow-set-focus",
+    "core:window:allow-is-visible",
+    "core:window:allow-set-always-on-top",
+    "core:window:allow-set-skip-taskbar",
+    "core:window:allow-set-size",
+    "global-shortcut:allow-is-registered",
+    "global-shortcut:allow-register",
+    "global-shortcut:allow-unregister"
   ]
 }

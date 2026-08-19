@@ -51,7 +51,10 @@ export default function NetworkPanel({ status, myColor, errorMsg, onHost, onJoin
       )}
 
       {(connected || connecting) && (
-        <button style={{ ...btnStyle, background: '#c44' }} onClick={onDisconnect}>断开连接</button>
+        <div style={{ ...rowStyle, justifyContent: 'space-between' }}>
+          <span style={{ fontSize: 10, color: '#999' }}>{connecting ? '正在建立连接' : '对局进行中'}</span>
+          <button style={disconnectBtnStyle} onClick={onDisconnect}>断开</button>
+        </div>
       )}
     </div>
   );
@@ -89,4 +92,15 @@ const inputStyle: React.CSSProperties = {
 const btnStyle: React.CSSProperties = {
   padding: '3px 8px', border: '1px solid #ccc', borderRadius: 3,
   background: '#fff', color: '#444', fontSize: 11, cursor: 'pointer',
+};
+
+const disconnectBtnStyle: React.CSSProperties = {
+  padding: '1px 6px',
+  border: '1px solid #ddd',
+  borderRadius: 4,
+  background: '#fafafa',
+  color: '#888',
+  fontSize: 10,
+  cursor: 'pointer',
+  lineHeight: 1.4,
 };

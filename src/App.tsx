@@ -20,28 +20,57 @@ export default function App() {
   const [aiDifficulty, setAiDifficulty] = useState(2000);
   const [state, setState] = useState<GameState>(() => createGameState(9, 6.5));
   const [thinking, setThinking] = useState(false);
+  const [boardColor, setBoardColor] = useState('#E8E0D0');
+  const [boardTransparent, setBoardTransparent] = useState(false);
+  const [bossKey, setBossKey] = useState('CommandOrControl+Shift+H');
+  const [bossKeyTriggerAt, setBossKeyTriggerAt] = useState<number | null>(null);
 
   const net = useNetwork(state, setState);
 
   useEffect(() => {
     if (!isTauri()) return;
 
-    let unregister: (() => void) | undefined;
+    let cancelled = false;
+    const key = bossKey;
 
-    import('@tauri-apps/plugin-global-shortcut').then(({ register, unregister: unreg }) => {
-      register('Escape', () => {
-        import('@tauri-apps/api/core').then(({ invoke }) => {
-          invoke('toggle_visible');
+    import('@tauri-apps/plugin-global-shortcut').then(async (mod) => {
+      if (cancelled) return;
+      try {
+        // 防止多次切换快捷键导致注册残留
+        try {
+          await mod.unregister(key);
+        } catch {}
+
+        await mod.register(key, (event) => {
+          if (event.state === 'Pressed') {
+            console.log('[boss-key] triggered:', key, 'event=', event);
+            setBossKeyTriggerAt(Date.now());
+            import('@tauri-apps/api/core').then(({ invoke }) => {
+              invoke('toggle_visible').catch((e) => {
+                console.error('[boss-key] invoke toggle_visible failed:', e);
+              });
+            });
+          }
         });
-      }).then(() => {
-        unregister = () => { unreg('Escape').catch(() => {}); };
-      }).catch(() => {});
+
+        try {
+          const ok = await mod.isRegistered(key);
+          console.log('[boss-key] registered:', key, 'ok=', ok);
+        } catch {}
+      } catch (e) {
+        console.error('[boss-key] failed to register:', key, e);
+      }
     }).catch(() => {});
 
     return () => {
-      unregister?.();
+      cancelled = true;
+      import('@tauri-apps/plugin-global-shortcut').then(async (mod) => {
+        try {
+          await mod.unregister(key);
+        } catch {}
+      }).catch(() => {});
     };
-  }, []);
+  }, [bossKey]);
 
   const newGame = useCallback(() => {
     terminateAI();
@@ -129,7 +158,6 @@ export default function App() {
       flexDirection: 'column',
       background: '#ffffff',
       overflow: 'hidden',
-      borderRadius: 8,
       color: '#333',
     }}>
       <TitleBar />
@@ -143,6 +171,13 @@ export default function App() {
         aiDifficulty={aiDifficulty}
         onAiDifficultyChange={setAiDifficulty}
         onNewGame={newGame}
+        boardColor={boardColor}
+        onBoardColorChange={setBoardColor}
+        boardTransparent={boardTransparent}
+        onBoardTransparentChange={setBoardTransparent}
+        bossKey={bossKey}
+        onBossKeyChange={setBossKey}
+        bossKeyTriggerAt={bossKeyTriggerAt}
       />
       {gameMode === 'network' && (
         <NetworkPanel
@@ -154,7 +189,7 @@ export default function App() {
           onDisconnect={net.disconnect}
         />
       )}
-      <Board state={state} onPlace={handlePlace} disabled={!isMyTurn || thinking || state.isOver} />
+      <Board state={state} onPlace={handlePlace} disabled={!isMyTurn || thinking || state.isOver} boardColor={boardColor} boardTransparent={boardTransparent} />
       <GameInfo state={state} onPass={handlePass} onResign={handleResign} disabled={!isMyTurn || thinking} />
       {thinking && <div style={{ textAlign: 'center', fontSize: 11, color: '#888', padding: 4 }}>AI 思考中...</div>}
     </div>
