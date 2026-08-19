@@ -44,7 +44,7 @@ function removeGroup(board: Board, stones: Position[]): number {
   return stones.length;
 }
 
-export function createGameState(size: number, komi = 6.5): GameState {
+export function createGameState(size: number, komi = 7.5): GameState {
   return {
     size,
     board: createBoard(size),

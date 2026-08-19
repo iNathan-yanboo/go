@@ -22,6 +22,10 @@ pub fn run() {
             ws_client::ws_disconnect,
         ])
         .setup(|app| {
+            if let Some(w) = app.get_webview_window("main") {
+                let _ = w.set_shadow(false);
+            }
+
             let quit = MenuItem::with_id(app, "quit", "Exit", true, None::<&str>)?;
             let show_hide = MenuItem::with_id(app, "show_hide", "Show/Hide", true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&show_hide, &quit])?;

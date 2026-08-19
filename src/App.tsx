@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import TitleBar from './components/TitleBar';
 import Board from './components/Board';
 import GameInfo from './components/GameInfo';
@@ -8,24 +9,58 @@ import { GameState, BLACK } from './game/types';
 import { createGameState, playMove, pass, resign } from './game/engine';
 import { getAIMove, terminateAI } from './game/ai';
 import { useNetwork } from './hooks/useNetwork';
+import { getInitialSettings, saveSettings } from './utils/settingsStorage';
+import { startWindowDrag } from './utils/windowDrag';
 
 function isTauri() {
   return !!(window as any).__TAURI_INTERNALS__;
 }
 
 export default function App() {
-  const [boardSize, setBoardSize] = useState(9);
-  const [komi, setKomi] = useState(6.5);
-  const [gameMode, setGameMode] = useState<'local' | 'ai' | 'network'>('local');
-  const [aiDifficulty, setAiDifficulty] = useState(2000);
-  const [state, setState] = useState<GameState>(() => createGameState(9, 6.5));
+  const initial = getInitialSettings();
+  const [boardSize, setBoardSize] = useState(initial.boardSize);
+  const [komi, setKomi] = useState(initial.komi);
+  const [gameMode, setGameMode] = useState<'local' | 'ai' | 'network'>(initial.gameMode);
+  const [aiDifficulty, setAiDifficulty] = useState(initial.aiDifficulty);
+  const [state, setState] = useState<GameState>(() => createGameState(initial.boardSize, initial.komi));
   const [thinking, setThinking] = useState(false);
-  const [boardColor, setBoardColor] = useState('#E8E0D0');
-  const [boardTransparent, setBoardTransparent] = useState(false);
-  const [bossKey, setBossKey] = useState('CommandOrControl+Shift+H');
+  const [boardColor, setBoardColor] = useState(initial.boardColor);
+  const [boardTransparent, setBoardTransparent] = useState(initial.boardTransparent);
+  const [bossKey, setBossKey] = useState(initial.bossKey);
+  const [opacity, setOpacity] = useState(initial.opacity);
+  const [alwaysOnTop, setAlwaysOnTop] = useState(initial.alwaysOnTop);
+  const [stealthMode, setStealthMode] = useState(initial.stealthMode);
   const [bossKeyTriggerAt, setBossKeyTriggerAt] = useState<number | null>(null);
 
   const net = useNetwork(state, setState);
+
+  useEffect(() => {
+    document.documentElement.style.opacity = String(initial.opacity);
+    if (isTauri()) {
+      invoke('set_always_on_top', { onTop: initial.alwaysOnTop }).catch(() => {});
+      invoke('set_stealth_mode', { stealth: initial.stealthMode }).catch(() => {});
+    }
+  }, []);
+
+  useEffect(() => {
+    saveSettings({
+      boardSize,
+      komi,
+      gameMode,
+      aiDifficulty,
+      boardColor,
+      boardTransparent,
+      bossKey,
+      opacity,
+      alwaysOnTop,
+      stealthMode,
+    });
+  }, [boardSize, komi, gameMode, aiDifficulty, boardColor, boardTransparent, bossKey, opacity, alwaysOnTop, stealthMode]);
+
+  const handleOpacityChange = useCallback((v: number) => {
+    setOpacity(v);
+    document.documentElement.style.opacity = String(v);
+  }, []);
 
   useEffect(() => {
     if (!isTauri()) return;
@@ -154,11 +189,21 @@ export default function App() {
     <div style={{
       width: '100%',
       height: '100vh',
+      padding: 2,
+      background: 'transparent',
+    }}>
+      <div
+      onMouseDown={startWindowDrag}
+      style={{
+      width: '100%',
+      height: '100%',
       display: 'flex',
       flexDirection: 'column',
       background: '#ffffff',
       overflow: 'hidden',
+      borderRadius: 12,
       color: '#333',
+      boxShadow: '0 0 0 1px rgba(0,0,0,0.04)',
     }}>
       <TitleBar />
       <Settings
@@ -178,6 +223,12 @@ export default function App() {
         bossKey={bossKey}
         onBossKeyChange={setBossKey}
         bossKeyTriggerAt={bossKeyTriggerAt}
+        opacity={opacity}
+        onOpacityChange={handleOpacityChange}
+        alwaysOnTop={alwaysOnTop}
+        onAlwaysOnTopChange={setAlwaysOnTop}
+        stealthMode={stealthMode}
+        onStealthModeChange={setStealthMode}
       />
       {gameMode === 'network' && (
         <NetworkPanel
@@ -192,6 +243,7 @@ export default function App() {
       <Board state={state} onPlace={handlePlace} disabled={!isMyTurn || thinking || state.isOver} boardColor={boardColor} boardTransparent={boardTransparent} />
       <GameInfo state={state} onPass={handlePass} onResign={handleResign} disabled={!isMyTurn || thinking} />
       {thinking && <div style={{ textAlign: 'center', fontSize: 11, color: '#888', padding: 4 }}>AI 思考中...</div>}
+      </div>
     </div>
   );
 }

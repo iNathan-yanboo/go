@@ -129,7 +129,7 @@ export default function Board({ state, onPlace, disabled, boardColor, boardTrans
   };
 
   return (
-    <div ref={containerRef} style={{ width: '100%', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 0, background: boardTransparent ? 'transparent' : '#f8f8f8' }}>
+    <div ref={containerRef} data-no-drag="true" style={{ width: '100%', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 0, background: boardTransparent ? 'transparent' : '#f8f8f8' }}>
       <canvas
         ref={canvasRef}
         style={{ width: canvasSize, height: canvasSize, cursor: disabled ? 'default' : 'pointer', borderRadius: 4, boxShadow: '0 0 0 1px #ddd' }}

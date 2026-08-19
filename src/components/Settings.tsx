@@ -22,6 +22,12 @@ interface SettingsProps {
   bossKey: string;
   onBossKeyChange: (key: string) => void;
   bossKeyTriggerAt: number | null;
+  opacity: number;
+  onOpacityChange: (v: number) => void;
+  alwaysOnTop: boolean;
+  onAlwaysOnTopChange: (v: boolean) => void;
+  stealthMode: boolean;
+  onStealthModeChange: (v: boolean) => void;
 }
 
 function normalizeKey(key: string): string | null {
@@ -98,22 +104,10 @@ function shortcutDisplay(s: string): string {
 }
 
 export default function Settings(props: SettingsProps) {
-  const [opacity, setOpacity] = useState(0.5);
-  const [alwaysOnTop, setAlwaysOnTop] = useState(false);
-  const [stealthMode, setStealthMode] = useState(false);
   const [open, setOpen] = useState(false);
   const [recording, setRecording] = useState(false);
   const [bossKeyError, setBossKeyError] = useState<string | null>(null);
   const keyInputRef = useRef<HTMLButtonElement>(null);
-
-  const handleOpacity = (v: number) => {
-    setOpacity(v);
-    document.documentElement.style.opacity = String(v);
-  };
-
-  useEffect(() => {
-    handleOpacity(0.5);
-  }, []);
 
   useEffect(() => {
     if (!recording) return;
@@ -144,25 +138,30 @@ export default function Settings(props: SettingsProps) {
   }, [recording, props]);
 
   const handlePin = async () => {
-    const next = !alwaysOnTop;
-    setAlwaysOnTop(next);
+    const next = !props.alwaysOnTop;
+    props.onAlwaysOnTopChange(next);
     if (isTauri()) {
       await invoke('set_always_on_top', { onTop: next });
     }
   };
 
   const handleStealth = async () => {
-    const next = !stealthMode;
-    setStealthMode(next);
+    const next = !props.stealthMode;
+    props.onStealthModeChange(next);
     if (next) {
-      handleOpacity(0.3);
-      setAlwaysOnTop(true);
+      props.onOpacityChange(0.3);
+      props.onAlwaysOnTopChange(true);
     } else {
-      handleOpacity(0.5);
-      setAlwaysOnTop(false);
+      props.onOpacityChange(0.5);
+      props.onAlwaysOnTopChange(false);
     }
     if (isTauri()) {
       await invoke('set_stealth_mode', { stealth: next });
+      if (next) {
+        await invoke('set_always_on_top', { onTop: true });
+      } else {
+        await invoke('set_always_on_top', { onTop: false });
+      }
     }
   };
 
@@ -195,7 +194,7 @@ export default function Settings(props: SettingsProps) {
               type="number"
               step={0.5}
               value={props.komi}
-              onChange={(e) => props.onKomiChange(parseFloat(e.target.value) || 6.5)}
+              onChange={(e) => props.onKomiChange(parseFloat(e.target.value) || 7.5)}
               style={inputStyle}
             />
           </div>
@@ -216,12 +215,12 @@ export default function Settings(props: SettingsProps) {
         <div style={cardStyle}>
           <div style={rowStyle}>
             <label>置顶</label>
-            <button onClick={handlePin} style={{ ...smallBtnStyle, background: alwaysOnTop ? '#dff2df' : '#fff', borderColor: alwaysOnTop ? '#9bc79b' : '#ccc', color: alwaysOnTop ? '#2f6b2f' : '#444' }}>
-              {alwaysOnTop ? '开' : '关'}
+            <button onClick={handlePin} style={{ ...smallBtnStyle, background: props.alwaysOnTop ? '#dff2df' : '#fff', borderColor: props.alwaysOnTop ? '#9bc79b' : '#ccc', color: props.alwaysOnTop ? '#2f6b2f' : '#444' }}>
+              {props.alwaysOnTop ? '开' : '关'}
             </button>
             <label style={{ marginLeft: 8 }}>隐身模式</label>
-            <button onClick={handleStealth} style={{ ...smallBtnStyle, background: stealthMode ? '#f7e3d6' : '#fff', borderColor: stealthMode ? '#d8ab8f' : '#ccc', color: stealthMode ? '#9a4f1a' : '#444' }}>
-              {stealthMode ? '开' : '关'}
+            <button onClick={handleStealth} style={{ ...smallBtnStyle, background: props.stealthMode ? '#f7e3d6' : '#fff', borderColor: props.stealthMode ? '#d8ab8f' : '#ccc', color: props.stealthMode ? '#9a4f1a' : '#444' }}>
+              {props.stealthMode ? '开' : '关'}
             </button>
           </div>
           <div style={rowStyle}>
@@ -250,11 +249,11 @@ export default function Settings(props: SettingsProps) {
               min={0.1}
               max={1}
               step={0.05}
-              value={opacity}
-              onChange={(e) => handleOpacity(parseFloat(e.target.value))}
+              value={props.opacity}
+              onChange={(e) => props.onOpacityChange(parseFloat(e.target.value))}
               style={{ flex: 1, minWidth: 140 }}
             />
-            <span style={{ fontSize: 11, width: 30, textAlign: 'right' }}>{Math.round(opacity * 100)}%</span>
+            <span style={{ fontSize: 11, width: 30, textAlign: 'right' }}>{Math.round(props.opacity * 100)}%</span>
           </div>
           {props.gameMode === 'ai' && (
             <div style={rowStyle}>
