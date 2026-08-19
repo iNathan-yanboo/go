@@ -4,3 +4,5 @@ src-tauri/target/
 server/node_modules/
 *.log
 .DS_Store
+gg_*.dmg
+app-icon.png
