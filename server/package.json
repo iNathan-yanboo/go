@@ -1,0 +1,12 @@
+{
+  "name": "gg-relay-server",
+  "version": "1.0.0",
+  "description": "Standalone WebSocket relay server for GG",
+  "main": "relay.js",
+  "scripts": {
+    "start": "node relay.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}
