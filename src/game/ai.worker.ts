@@ -44,7 +44,7 @@ function selectChild(node: MCTSNode): MCTSNode {
 function randomPlayout(state: GameState): number {
   let s = state;
   let moves = 0;
-  const maxMoves = s.size * s.size * 3;
+  const maxMoves = Math.min(state.size * state.size * 2, 40 + state.size * 3);
 
   while (!s.isOver && moves < maxMoves) {
     const valid = getValidMoves(s);

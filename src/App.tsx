@@ -7,7 +7,7 @@ import Settings from './components/Settings';
 import NetworkPanel from './components/NetworkPanel';
 import { GameState, BLACK } from './game/types';
 import { createGameState, playMove, pass, resign } from './game/engine';
-import { getAIMove, terminateAI } from './game/ai';
+import { getBestAIMove, terminateAI, aiEngineLabel, checkPachiAvailable } from './game/aiRouter';
 import { useNetwork } from './hooks/useNetwork';
 import { getInitialSettings, saveSettings } from './utils/settingsStorage';
 import { startWindowDrag } from './utils/windowDrag';
@@ -24,6 +24,8 @@ export default function App() {
   const [aiDifficulty, setAiDifficulty] = useState(initial.aiDifficulty);
   const [state, setState] = useState<GameState>(() => createGameState(initial.boardSize, initial.komi));
   const [thinking, setThinking] = useState(false);
+  const [aiEngine, setAiEngine] = useState<string | null>(null);
+  const [pachiAvailable, setPachiAvailable] = useState<boolean | null>(null);
   const [boardColor, setBoardColor] = useState(initial.boardColor);
   const [boardTransparent, setBoardTransparent] = useState(initial.boardTransparent);
   const [bossKey, setBossKey] = useState(initial.bossKey);
@@ -107,10 +109,19 @@ export default function App() {
     };
   }, [bossKey]);
 
+  useEffect(() => {
+    if (!isTauri() || gameMode !== 'ai') {
+      setPachiAvailable(null);
+      return;
+    }
+    checkPachiAvailable().then(setPachiAvailable);
+  }, [gameMode, boardSize]);
+
   const newGame = useCallback(() => {
     terminateAI();
     setState(createGameState(boardSize, komi));
     setThinking(false);
+    setAiEngine(null);
   }, [boardSize, komi]);
 
   const handlePlace = useCallback(async (x: number, y: number) => {
@@ -131,10 +142,14 @@ export default function App() {
 
     if (gameMode === 'ai' && !next.isOver) {
       setThinking(true);
-      const move = await getAIMove(next, aiDifficulty);
+      const { move, engine } = await getBestAIMove(next, aiDifficulty);
+      setAiEngine(aiEngineLabel(engine));
       if (move) {
         const aiNext = playMove(next, move.x, move.y);
         if (aiNext) setState(aiNext);
+        else setState(pass(next));
+      } else {
+        setState(pass(next));
       }
       setThinking(false);
     }
@@ -155,7 +170,8 @@ export default function App() {
 
     if (gameMode === 'ai' && !next.isOver) {
       setThinking(true);
-      getAIMove(next, aiDifficulty).then((move) => {
+      getBestAIMove(next, aiDifficulty).then(({ move, engine }) => {
+        setAiEngine(aiEngineLabel(engine));
         if (move) {
           const aiNext = playMove(next, move.x, move.y);
           if (aiNext) setState(aiNext);
@@ -230,6 +246,11 @@ export default function App() {
         stealthMode={stealthMode}
         onStealthModeChange={setStealthMode}
       />
+      {gameMode === 'ai' && boardSize !== 9 && pachiAvailable === false && (
+        <div style={{ padding: '4px 10px', fontSize: 11, color: '#9a4f1a', background: '#fdf6ef', borderBottom: '1px solid #f0e0d0' }}>
+          未安装 Pachi，{boardSize} 路 AI 较慢。请在设置中查看安装指引（brew install pachi）
+        </div>
+      )}
       {gameMode === 'network' && (
         <NetworkPanel
           status={net.status}
@@ -242,7 +263,7 @@ export default function App() {
       )}
       <Board state={state} onPlace={handlePlace} disabled={!isMyTurn || thinking || state.isOver} boardColor={boardColor} boardTransparent={boardTransparent} />
       <GameInfo state={state} onPass={handlePass} onResign={handleResign} disabled={!isMyTurn || thinking} />
-      {thinking && <div style={{ textAlign: 'center', fontSize: 11, color: '#888', padding: 4 }}>AI 思考中...</div>}
+      {thinking && <div style={{ textAlign: 'center', fontSize: 11, color: '#888', padding: 4 }}>AI 思考中{aiEngine ? ` (${aiEngine})` : ''}...</div>}
       </div>
     </div>
   );

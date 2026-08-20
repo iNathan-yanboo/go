@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { checkPachiAvailable } from '../game/aiRouter';
 
 function isTauri() {
   return !!(window as any).__TAURI_INTERNALS__;
@@ -107,7 +108,13 @@ export default function Settings(props: SettingsProps) {
   const [open, setOpen] = useState(false);
   const [recording, setRecording] = useState(false);
   const [bossKeyError, setBossKeyError] = useState<string | null>(null);
+  const [pachiAvailable, setPachiAvailable] = useState<boolean | null>(null);
   const keyInputRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!open || props.gameMode !== 'ai') return;
+    checkPachiAvailable().then(setPachiAvailable);
+  }, [open, props.gameMode, props.boardSize]);
 
   useEffect(() => {
     if (!recording) return;
@@ -270,6 +277,32 @@ export default function Settings(props: SettingsProps) {
               <span style={{ fontSize: 11, width: 40, textAlign: 'right' }}>{props.aiDifficulty}</span>
             </div>
           )}
+          {props.gameMode === 'ai' && (
+            <div style={aiHintStyle}>
+              <div style={{ fontWeight: 600, marginBottom: 4 }}>AI 引擎说明</div>
+              <div>9 路：内置 Moka（无需安装）</div>
+              {props.boardSize === 9 ? (
+                <div style={{ color: '#666' }}>其他路数需安装 Pachi</div>
+              ) : pachiAvailable ? (
+                <div style={{ color: '#2f6b2f' }}>{props.boardSize} 路：Pachi 已就绪</div>
+              ) : (
+                <>
+                  <div style={{ color: '#9a4f1a' }}>
+                    {props.boardSize} 路：未检测到 Pachi，当前将使用较慢的 MCTS
+                  </div>
+                  <div style={{ marginTop: 6, lineHeight: 1.5 }}>
+                    安装步骤：
+                    <br />1. 打开「终端」
+                    <br />2. 执行 <code style={codeStyle}>brew install pachi</code>
+                    <br />3. 重启本应用
+                  </div>
+                  <div style={{ marginTop: 4, color: '#888' }}>
+                    需先安装 Homebrew：<a href="https://brew.sh" target="_blank" rel="noreferrer" style={{ color: '#4d6275' }}>brew.sh</a>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
 
         <div style={{ ...cardStyle, gridColumn: '1 / -1' }}>
@@ -372,4 +405,23 @@ const toggleBtnStyle: React.CSSProperties = {
   ...smallBtnStyle,
   alignSelf: 'flex-start',
   marginTop: 6,
+};
+
+const aiHintStyle: React.CSSProperties = {
+  marginTop: 6,
+  padding: '8px 10px',
+  borderRadius: 8,
+  background: '#f7f9fb',
+  border: '1px solid #e3eaf0',
+  fontSize: 11,
+  lineHeight: 1.45,
+  color: '#444',
+};
+
+const codeStyle: React.CSSProperties = {
+  padding: '1px 5px',
+  borderRadius: 4,
+  background: '#eef2f5',
+  fontFamily: 'ui-monospace, monospace',
+  fontSize: 10,
 };

@@ -1,4 +1,6 @@
 mod commands;
+mod gtp_engine;
+mod pachi;
 mod ws_client;
 mod ws_server;
 
@@ -11,10 +13,14 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .manage(ws_client::WsClientState::default())
+        .manage(pachi::PachiState::default())
         .invoke_handler(tauri::generate_handler![
             commands::set_always_on_top,
             commands::toggle_visible,
             commands::set_stealth_mode,
+            pachi::pachi_genmove,
+            pachi::pachi_available,
+            pachi::pachi_shutdown,
             ws_server::start_ws_server,
             ws_server::stop_ws_server,
             ws_client::ws_connect,
