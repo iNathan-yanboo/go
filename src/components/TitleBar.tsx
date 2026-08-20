@@ -8,7 +8,7 @@ function getWin() {
   }
 }
 
-export default function TitleBar() {
+export default function TitleBar({ title = 'Memo' }: { title?: string }) {
   const handleDrag = (e: React.MouseEvent) => {
     e.preventDefault();
     getWin()?.startDragging();
@@ -29,7 +29,7 @@ export default function TitleBar() {
         flexShrink: 0,
       }}
     >
-      <span style={{ fontSize: 12, color: '#555', pointerEvents: 'none' }}>Memo</span>
+      <span style={{ fontSize: 12, color: '#555', pointerEvents: 'none' }}>{title}</span>
       <div
         onMouseDown={(e) => e.stopPropagation()}
         style={{ display: 'flex', gap: 6 }}

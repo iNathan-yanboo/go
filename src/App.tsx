@@ -1,15 +1,15 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import TitleBar from './components/TitleBar';
 import Board from './components/Board';
 import GameInfo from './components/GameInfo';
-import Settings from './components/Settings';
+import ActionBar from './components/ActionBar';
 import NetworkPanel from './components/NetworkPanel';
 import { GameState, BLACK } from './game/types';
 import { createGameState, playMove, pass, resign } from './game/engine';
 import { getBestAIMove, terminateAI, aiEngineLabel, checkPachiAvailable } from './game/aiRouter';
 import { useNetwork } from './hooks/useNetwork';
-import { getInitialSettings, saveSettings } from './utils/settingsStorage';
+import { AppSettings, getInitialSettings, saveSettings } from './utils/settingsStorage';
 import { startWindowDrag } from './utils/windowDrag';
 
 function isTauri() {
@@ -34,7 +34,32 @@ export default function App() {
   const [stealthMode, setStealthMode] = useState(initial.stealthMode);
   const [bossKeyTriggerAt, setBossKeyTriggerAt] = useState<number | null>(null);
 
+  const boardSizeRef = useRef(boardSize);
+  const komiRef = useRef(komi);
+  boardSizeRef.current = boardSize;
+  komiRef.current = komi;
+
   const net = useNetwork(state, setState);
+
+  const applySettings = useCallback((next: AppSettings, restartGame = false) => {
+    setBoardSize(next.boardSize);
+    setKomi(next.komi);
+    setGameMode(next.gameMode);
+    setAiDifficulty(next.aiDifficulty);
+    setBoardColor(next.boardColor);
+    setBoardTransparent(next.boardTransparent);
+    setBossKey(next.bossKey);
+    setOpacity(next.opacity);
+    setAlwaysOnTop(next.alwaysOnTop);
+    setStealthMode(next.stealthMode);
+    document.documentElement.style.opacity = String(next.opacity);
+    if (restartGame) {
+      terminateAI();
+      setState(createGameState(next.boardSize, next.komi));
+      setThinking(false);
+      setAiEngine(null);
+    }
+  }, []);
 
   useEffect(() => {
     document.documentElement.style.opacity = String(initial.opacity);
@@ -43,6 +68,29 @@ export default function App() {
       invoke('set_stealth_mode', { stealth: initial.stealthMode }).catch(() => {});
     }
   }, []);
+
+  useEffect(() => {
+    if (!isTauri()) return;
+    let unlistenSettings: (() => void) | undefined;
+    let unlistenNewGame: (() => void) | undefined;
+
+    import('@tauri-apps/api/event').then(async ({ listen }) => {
+      unlistenSettings = await listen<AppSettings>('gg-settings-updated', (event) => {
+        applySettings(event.payload);
+      });
+      unlistenNewGame = await listen('gg-new-game', () => {
+        terminateAI();
+        setState(createGameState(boardSizeRef.current, komiRef.current));
+        setThinking(false);
+        setAiEngine(null);
+      });
+    }).catch(() => {});
+
+    return () => {
+      unlistenSettings?.();
+      unlistenNewGame?.();
+    };
+  }, [applySettings]);
 
   useEffect(() => {
     saveSettings({
@@ -58,11 +106,6 @@ export default function App() {
       stealthMode,
     });
   }, [boardSize, komi, gameMode, aiDifficulty, boardColor, boardTransparent, bossKey, opacity, alwaysOnTop, stealthMode]);
-
-  const handleOpacityChange = useCallback((v: number) => {
-    setOpacity(v);
-    document.documentElement.style.opacity = String(v);
-  }, []);
 
   useEffect(() => {
     if (!isTauri()) return;
@@ -205,6 +248,7 @@ export default function App() {
     <div style={{
       width: '100%',
       height: '100vh',
+      minHeight: 420,
       padding: 2,
       background: 'transparent',
     }}>
@@ -222,30 +266,7 @@ export default function App() {
       boxShadow: '0 0 0 1px rgba(0,0,0,0.04)',
     }}>
       <TitleBar />
-      <Settings
-        boardSize={boardSize}
-        onBoardSizeChange={setBoardSize}
-        komi={komi}
-        onKomiChange={setKomi}
-        gameMode={gameMode}
-        onGameModeChange={setGameMode}
-        aiDifficulty={aiDifficulty}
-        onAiDifficultyChange={setAiDifficulty}
-        onNewGame={newGame}
-        boardColor={boardColor}
-        onBoardColorChange={setBoardColor}
-        boardTransparent={boardTransparent}
-        onBoardTransparentChange={setBoardTransparent}
-        bossKey={bossKey}
-        onBossKeyChange={setBossKey}
-        bossKeyTriggerAt={bossKeyTriggerAt}
-        opacity={opacity}
-        onOpacityChange={handleOpacityChange}
-        alwaysOnTop={alwaysOnTop}
-        onAlwaysOnTopChange={setAlwaysOnTop}
-        stealthMode={stealthMode}
-        onStealthModeChange={setStealthMode}
-      />
+      <ActionBar onNewGame={newGame} />
       {gameMode === 'ai' && boardSize !== 9 && pachiAvailable === false && (
         <div style={{ padding: '4px 10px', fontSize: 11, color: '#9a4f1a', background: '#fdf6ef', borderBottom: '1px solid #f0e0d0' }}>
           未安装 Pachi，{boardSize} 路 AI 较慢。请在设置中查看安装指引（brew install pachi）
@@ -262,9 +283,36 @@ export default function App() {
         />
       )}
       <Board state={state} onPlace={handlePlace} disabled={!isMyTurn || thinking || state.isOver} boardColor={boardColor} boardTransparent={boardTransparent} />
-      <GameInfo state={state} onPass={handlePass} onResign={handleResign} disabled={!isMyTurn || thinking} />
-      {thinking && <div style={{ textAlign: 'center', fontSize: 11, color: '#888', padding: 4 }}>AI 思考中{aiEngine ? ` (${aiEngine})` : ''}...</div>}
+      <div style={footerStyle}>
+        <GameInfo state={state} onPass={handlePass} onResign={handleResign} disabled={!isMyTurn || thinking} />
+        <div style={thinkingStyle}>
+          {thinking ? `AI 思考中${aiEngine ? ` (${aiEngine})` : ''}...` : ''}
+        </div>
+      </div>
       </div>
     </div>
   );
 }
+
+const footerStyle: React.CSSProperties = {
+  flexShrink: 0,
+  minHeight: 96,
+  display: 'flex',
+  flexDirection: 'column',
+  background: '#f8f8f8',
+  borderTop: '1px solid #e5e5e5',
+};
+
+const thinkingStyle: React.CSSProperties = {
+  textAlign: 'center',
+  fontSize: 11,
+  color: '#888',
+  padding: '2px 4px 4px',
+  height: 22,
+  flexShrink: 0,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  display: '-webkit-box',
+  WebkitBoxOrient: 'vertical',
+  WebkitLineClamp: 2,
+};

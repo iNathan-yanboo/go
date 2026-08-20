@@ -24,7 +24,8 @@ export default function Board({ state, onPlace, disabled, boardColor, boardTrans
     if (!container) return;
     const ro = new ResizeObserver((entries) => {
       const { width, height } = entries[0].contentRect;
-      setCanvasSize(Math.min(width, height));
+      const next = Math.floor(Math.min(width, height));
+      setCanvasSize((prev) => (Math.abs(prev - next) < 2 ? prev : next));
     });
     ro.observe(container);
     return () => ro.disconnect();
@@ -46,9 +47,14 @@ export default function Board({ state, onPlace, disabled, boardColor, boardTrans
     if (!canvas) return;
     const ctx = canvas.getContext('2d')!;
     const dpr = window.devicePixelRatio || 1;
-    canvas.width = canvasSize * dpr;
-    canvas.height = canvasSize * dpr;
-    ctx.scale(dpr, dpr);
+    const px = Math.round(canvasSize * dpr);
+    if (canvas.width !== px || canvas.height !== px) {
+      canvas.width = px;
+      canvas.height = px;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    } else {
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
 
     if (boardTransparent) {
       ctx.clearRect(0, 0, canvasSize, canvasSize);
@@ -129,7 +135,7 @@ export default function Board({ state, onPlace, disabled, boardColor, boardTrans
   };
 
   return (
-    <div ref={containerRef} data-no-drag="true" style={{ width: '100%', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 0, background: boardTransparent ? 'transparent' : '#f8f8f8' }}>
+    <div ref={containerRef} data-no-drag="true" style={{ width: '100%', flex: '1 1 0', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 0, overflow: 'hidden', background: boardTransparent ? 'transparent' : '#f8f8f8' }}>
       <canvas
         ref={canvasRef}
         style={{ width: canvasSize, height: canvasSize, cursor: disabled ? 'default' : 'pointer', borderRadius: 4, boxShadow: '0 0 0 1px #ddd' }}

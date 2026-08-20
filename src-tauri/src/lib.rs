@@ -18,6 +18,7 @@ pub fn run() {
             commands::set_always_on_top,
             commands::toggle_visible,
             commands::set_stealth_mode,
+            commands::open_settings,
             pachi::pachi_genmove,
             pachi::pachi_available,
             pachi::pachi_shutdown,
@@ -34,7 +35,8 @@ pub fn run() {
 
             let quit = MenuItem::with_id(app, "quit", "Exit", true, None::<&str>)?;
             let show_hide = MenuItem::with_id(app, "show_hide", "Show/Hide", true, None::<&str>)?;
-            let menu = Menu::with_items(app, &[&show_hide, &quit])?;
+            let settings = MenuItem::with_id(app, "settings", "设置", true, None::<&str>)?;
+            let menu = Menu::with_items(app, &[&settings, &show_hide, &quit])?;
 
             TrayIconBuilder::new()
                 .icon(app.default_window_icon().unwrap().clone())
@@ -44,6 +46,9 @@ pub fn run() {
                 .on_menu_event(|app, event| {
                     match event.id.as_ref() {
                         "quit" => app.exit(0),
+                        "settings" => {
+                            let _ = crate::commands::open_or_focus_settings(app);
+                        }
                         "show_hide" => {
                             if let Some(w) = app.get_webview_window("main") {
                                 if w.is_visible().unwrap_or(false) {

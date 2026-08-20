@@ -67,33 +67,36 @@ export default function GameInfo({ state, onPass, onResign, disabled }: GameInfo
 
   return (
     <div style={containerStyle}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-          <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', background: state.currentPlayer === BLACK ? '#111' : '#f0f0f0', border: '1px solid #666' }} />
-          <span>{state.isOver ? '对局结束' : `${colorName(state.currentPlayer)}走`}</span>
-          <span style={{ fontSize: 11, color: '#777' }}>第 {state.moveCount} 手</span>
+      <div style={row1Style}>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center', minWidth: 0, flex: '0 1 auto' }}>
+          <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', background: state.currentPlayer === BLACK ? '#111' : '#f0f0f0', border: '1px solid #666', flexShrink: 0 }} />
+          <span style={{ whiteSpace: 'nowrap' }}>{state.isOver ? '对局结束' : `${colorName(state.currentPlayer)}走`}</span>
+          <span style={{ fontSize: 11, color: '#777', whiteSpace: 'nowrap' }}>第 {state.moveCount} 手</span>
         </div>
-        <div style={subtitleStyle}>{subtitle}</div>
+        <div style={subtitleStyle} title={subtitle}>{subtitle}</div>
       </div>
-      <div style={{ display: 'flex', gap: 12, fontSize: 11, color: '#666', flexWrap: 'wrap' }}>
+      <div style={row2Style}>
         <span>黑提: {state.captures[BLACK]}</span>
         <span>白提: {state.captures[WHITE]}</span>
         <span>贴目: {state.komi}</span>
-        <span>盘面估算: 黑 {blackScoreNow} / 白 {Math.round(whiteScoreNow * 10) / 10}</span>
+        <span>盘面: 黑 {blackScoreNow} / 白 {Math.round(whiteScoreNow * 10) / 10}</span>
         <span>{scoreLeadText}</span>
       </div>
-      {state.isOver && state.territory && (
-        <div style={{ fontSize: 11, color: '#4f7a4f' }}>
-          B: {state.territory[BLACK] + state.captures[BLACK]} | W: {state.territory[WHITE] + state.captures[WHITE] + state.komi}
-          {' -> '}{state.winner === EMPTY ? '平局' : `${colorName(state.winner!)}胜`}
-        </div>
-      )}
-      {!state.isOver && (
-        <div style={{ display: 'flex', gap: 6 }}>
-          <button onClick={onPass} disabled={disabled} style={btnStyle}>停一手</button>
-          <button onClick={onResign} disabled={disabled} style={btnStyle}>认输</button>
-        </div>
-      )}
+      <div style={row3Style}>
+        {state.isOver && state.territory ? (
+          <div style={{ fontSize: 11, color: '#4f7a4f', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            B: {state.territory[BLACK] + state.captures[BLACK]} | W: {state.territory[WHITE] + state.captures[WHITE] + state.komi}
+            {' -> '}{state.winner === EMPTY ? '平局' : `${colorName(state.winner!)}胜`}
+          </div>
+        ) : state.isOver ? (
+          <div style={{ fontSize: 11, color: '#4f7a4f' }}>{colorName(state.winner ?? EMPTY)}胜</div>
+        ) : (
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button onClick={onPass} disabled={disabled} style={btnStyle}>停一手</button>
+            <button onClick={onResign} disabled={disabled} style={btnStyle}>认输</button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -101,13 +104,38 @@ export default function GameInfo({ state, onPass, onResign, disabled }: GameInfo
 const containerStyle: React.CSSProperties = {
   padding: '6px 10px',
   background: '#f8f8f8',
-  borderTop: '1px solid #e5e5e5',
   display: 'flex',
   flexDirection: 'column',
   gap: 4,
   fontSize: 12,
   color: '#333',
   flexShrink: 0,
+  minHeight: 74,
+};
+
+const row1Style: React.CSSProperties = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  gap: 8,
+  minHeight: 20,
+  overflow: 'hidden',
+};
+
+const row2Style: React.CSSProperties = {
+  display: 'flex',
+  gap: 10,
+  flexWrap: 'wrap',
+  fontSize: 11,
+  color: '#666',
+  minHeight: 16,
+};
+
+const row3Style: React.CSSProperties = {
+  minHeight: 26,
+  display: 'flex',
+  alignItems: 'center',
+  flexWrap: 'wrap',
 };
 
 const btnStyle: React.CSSProperties = {
@@ -123,11 +151,13 @@ const btnStyle: React.CSSProperties = {
 const subtitleStyle: React.CSSProperties = {
   fontSize: 11,
   color: '#4d6275',
-  maxWidth: '55%',
+  flex: '1 1 0',
+  minWidth: 0,
   textAlign: 'right',
-  whiteSpace: 'nowrap',
   overflow: 'hidden',
-  textOverflow: 'ellipsis',
+  display: '-webkit-box',
+  WebkitBoxOrient: 'vertical',
+  WebkitLineClamp: 2,
 };
 
 function describePoint(pos: Position, size: number): string {
